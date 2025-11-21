@@ -8,3 +8,4 @@ code/.DS_Store
 outputs/
 __pycache__/
 **/dataset/process/
+**/log/*
