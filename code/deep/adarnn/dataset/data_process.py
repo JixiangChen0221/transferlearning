@@ -58,6 +58,7 @@ def TDC(num_domain, data_file, station, dis_type = 'coral'):
     end_time = datetime.datetime.strptime(
             '2016-06-30 23:00:00', '%Y-%m-%d %H:%M:%S')
     num_day = (end_time - start_time).days
+    # print(f"num_day={num_day}") # 1217
     split_N = 10
     data=pd.read_pickle(data_file)[station]
     feat =data[0][0:num_day]
@@ -114,13 +115,16 @@ def load_weather_data_multi_domain(file_path, batch_size=6, station='Changping',
     # mode: 'tdc', 'pre_process'
     data_file = os.path.join(file_path, "PRSA_Data_1.pkl")
     mean_train, std_train = data_weather.get_weather_data_statistic(data_file, station=station, start_time='2013-3-1 0:0',
-                                                                    end_time='2016-10-30 23:0')
+                                                                    end_time='2016-10-30 23:0') #? [C,],[C,]
+    #? res=((sel_start_time, sel_end_time)) -> list[tuple]
     split_time_list = get_split_time(number_domain, mode=mode, data_file =data_file,station=station, dis_type = dis_type)
     train_list = []
     for i in range(len(split_time_list)):
         time_temp = split_time_list[i]
+        #? train_loader.data.shape:[L',T,C]
         train_loader = data_weather.get_weather_data(data_file, station=station, start_time=time_temp[0],
                                                      end_time=time_temp[1], batch_size=batch_size, mean=mean_train, std=std_train)
+        #? train_list=[1,2,..K] segments of train_loader
         train_list.append(train_loader)
 
     valid_vld_loader = data_weather.get_weather_data(data_file, station=station, start_time='2016-7-2 0:0',

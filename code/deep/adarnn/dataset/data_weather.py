@@ -110,7 +110,7 @@ def get_dataset_statistic(df, station, start_date, end_date):
 
 def get_weather_data(data_file, station, start_time, end_time, batch_size, shuffle=True, mean=None, std=None):
     df=pd.read_pickle(data_file)
-
+    
     dataset=create_dataset(df, station, start_time,
                              end_time, mean=mean, std=std)
     train_loader=DataLoader(
@@ -128,6 +128,7 @@ def get_weather_data_shallow(data_file, station, start_time, end_time, batch_siz
 
 
 def get_weather_data_statistic(data_file, station, start_time, end_time):
+    # print(data_file) # ./dataset/process/PRSA_Data_1.pkl
     df=pd.read_pickle(data_file)
     mean_train, std_train =get_dataset_statistic(
         df, station, start_time, end_time)

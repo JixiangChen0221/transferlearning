@@ -159,7 +159,7 @@ def inference_all(output_path, model, model_path, loaders):
 def main_transfer(args):
     print(args)
 
-    output_path = args.outdir + '_' + args.station + '_' + args.model_name + '_weather_' + \
+    output_path = './log/'+args.outdir + '_' + args.station + '_' + args.model_name + '_weather_' + \
         args.loss_type + '_' + str(args.pre_epoch) + \
         '_'  + '_' + str(args.lr) + "_" + str(args.train_type) + "-layer-num-" + str(args.num_layer) + "-hidden-" + str(args.hidden_dim) + "-num_head-" + str(args.num_head) + "dw-" + str(args.dw)
         # "-hidden" + str(args.hidden_dim) + "-head" + str(args.num_head)
@@ -171,7 +171,7 @@ def main_transfer(args):
     source_loader,  target_loader, valid_loader, test_loader = data_process.load_weather_data(
         args.data_path, args.batch_size, args.station)
 
-    args.log_file = os.path.join(output_path, 'run.log')
+    args.log_file = os.path.join('./log', 'run.log')
     pprint('create model...')
     ######
     # Model parameters
@@ -277,10 +277,11 @@ def get_args():
 
     # other
     parser.add_argument('--seed', type=int, default=10)
-    parser.add_argument('--data_path', default="/root/Messi_du/adarnn/")
+    # parser.add_argument('--data_path', default="/root/Messi_du/adarnn/")
+    parser.add_argument('--data_path',default="./dataset/process/")
     parser.add_argument('--outdir', default='./outputs')
     parser.add_argument('--overwrite', action='store_true')
-    parser.add_argument('--log_file', type=str, default='run.log')
+    parser.add_argument('--log_file', type=str, default='./log/run.log')
     parser.add_argument('--gpu_id', type=int, default=0)
     parser.add_argument('--len_win', type=int, default=0)
     args = parser.parse_args()

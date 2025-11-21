@@ -43,6 +43,8 @@ def train_AdaRNN(args, model, optimizer, train_loader_list, epoch, dist_old=None
     for loader in train_loader_list:
         if len(loader) < len_loader:
             len_loader = len(loader)
+    #? 同时获取多个域的批次数据
+    # data_all = (loader1的第1个批次, loader2的第1个批次, loader3的第1个批次)
     for data_all in tqdm(zip(*train_loader_list), total=len_loader):
         optimizer.zero_grad()
         list_feat = []
@@ -99,6 +101,7 @@ def train_AdaRNN(args, model, optimizer, train_loader_list, epoch, dist_old=None
         if epoch > args.pre_epoch:
             weight_mat = model.update_weight_Boosting(
                 weight_mat, dist_old, dist_mat)
+        # dist_old=None, weight_mat=None (当前批次的域差异矩阵,累积域差异矩阵)
         return loss, loss_l1, weight_mat, dist_mat
     else:
         weight_mat = transform_type(out_weight_list)
@@ -200,10 +203,12 @@ def train_epoch_transfer(args, model, optimizer, train_loader_list):
             list_feat.append(feature)
             list_label.append(label_reg)
         flag = False
+        #? index = [(0, 1)] (num_domain = 2)
         index = get_index(len(data_all) - 1)
         for temp_index in index:
             s1 = temp_index[0]
             s2 = temp_index[1]
+            # make sure the same batch_size
             if list_feat[s1].shape[0] != list_feat[s2].shape[0]:
                 flag = True
                 break
@@ -212,12 +217,17 @@ def train_epoch_transfer(args, model, optimizer, train_loader_list):
 
         ###############
         total_loss = torch.zeros(1).cuda()
+        #? index = [(0, 1)] (num_domain = 2)
         for i in range(len(index)):
             feature_s = list_feat[index[i][0]]
             feature_t = list_feat[index[i][1]]
             label_reg_s = list_label[index[i][0]]
             label_reg_t = list_label[index[i][1]]
             feature_all = torch.cat((feature_s, feature_t), 0)
+
+            print(feature_s.shape,feature_t.shape)
+            print(label_reg_s.shape,label_reg_t.shape)
+            print(feature_all.shape)
 
             pred_all, loss_transfer, out_weight_list = model.forward_pre_train(
                 feature_all, len_win=args.len_win)
@@ -338,7 +348,7 @@ def transform_type(init_weight):
 def main_transfer(args):
     print(args)
 
-    output_path = args.outdir + '_' + args.station + '_' + args.model_name + '_weather_' + \
+    output_path = './log/'+args.outdir + '_' + args.station + '_' + args.model_name + '_weather_' + \
         args.loss_type + '_' + str(args.pre_epoch) + \
         '_' + str(args.dw) + '_' + str(args.lr)
     save_model_name = args.model_name + '_' + args.loss_type + \
@@ -346,10 +356,14 @@ def main_transfer(args):
     utils.dir_exist(output_path)
     pprint('create loaders...')
 
+    #? get train,val and test DataLoader
     train_loader_list, valid_loader, test_loader = data_process.load_weather_data_multi_domain(
         args.data_path, args.batch_size, args.station, args.num_domain, args.data_mode)
 
-    args.log_file = os.path.join(output_path, 'run.log')
+    # print(train_loader_list)
+    args.log_file = os.path.join('./log', 'run.log')
+    # utils.dir_exist("./log/")
+    # args.log_file = os.path.join("./log", "run.log")
     pprint('create model...')
     model = get_model(args.model_name)
     num_model = count_parameters(model)
@@ -442,10 +456,11 @@ def get_args():
 
     # other
     parser.add_argument('--seed', type=int, default=10)
-    parser.add_argument('--data_path', default="/root/Messi_du/adarnn/")
+    # parser.add_argument('--data_path', default="/root/Messi_du/adarnn/")
+    parser.add_argument('--data_path',default="./dataset/process/")
     parser.add_argument('--outdir', default='./outputs')
     parser.add_argument('--overwrite', action='store_true')
-    parser.add_argument('--log_file', type=str, default='run.log')
+    parser.add_argument('--log_file', type=str, default='./log/run.log')
     parser.add_argument('--gpu_id', type=int, default=0)
     parser.add_argument('--len_win', type=int, default=0)
     args = parser.parse_args()

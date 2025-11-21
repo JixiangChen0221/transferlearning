@@ -72,6 +72,8 @@ class AdaRNN(nn.Module):
             self.gate[i].bias.data.fill_(0.0)
 
     def forward_pre_train(self, x, len_win=0):
+        # print(f"x.shape:{x.shape}") # 2*B,T,C
+
         out = self.gru_features(x)
         fea = out[0]
         if self.use_bottleneck == True:
@@ -79,7 +81,7 @@ class AdaRNN(nn.Module):
             fc_out = self.fc(fea_bottleneck).squeeze()
         else:
             fc_out = self.fc_out(fea[:, -1, :]).squeeze()
-
+        
         out_list_all, out_weight_list = out[1], out[2]
         out_list_s, out_list_t = self.get_features(out_list_all)
         loss_transfer = torch.zeros((1,)).cuda()
@@ -87,6 +89,7 @@ class AdaRNN(nn.Module):
             criterion_transder = TransferLoss(
                 loss_type=self.trans_loss, input_dim=out_list_s[i].shape[2])
             h_start = 0 
+            # 源域的每个时间步
             for j in range(h_start, self.len_seq, 1):
                 i_start = j - len_win if j - len_win >= 0 else 0
                 i_end = j + len_win if j + len_win < self.len_seq else self.len_seq - 1
@@ -98,6 +101,8 @@ class AdaRNN(nn.Module):
         return fc_out, loss_transfer, out_weight_list
 
     def gru_features(self, x, predict=False):
+        # print(x.shape) # [72,24,6]
+
         x_input = x
         out = None
         out_lis = []
@@ -113,13 +118,15 @@ class AdaRNN(nn.Module):
         return out, out_lis, out_weight_list
 
     def process_gate_weight(self, out, index):
-        x_s = out[0: int(out.shape[0]//2)]
-        x_t = out[out.shape[0]//2: out.shape[0]]
-        x_all = torch.cat((x_s, x_t), 2)
-        x_all = x_all.view(x_all.shape[0], -1)
+        # print(out.shape)
+
+        x_s = out[0: int(out.shape[0]//2)] # L/2,T,D
+        x_t = out[out.shape[0]//2: out.shape[0]]  # L/2,T,D
+        x_all = torch.cat((x_s, x_t), 2) # L/2,T,2D
+        x_all = x_all.view(x_all.shape[0], -1) # L/2,2*TD
         weight = torch.sigmoid(self.bn_lst[index](
-            self.gate[index](x_all.float())))
-        weight = torch.mean(weight, dim=0)
+            self.gate[index](x_all.float())))  # L/2,2*TD -> L/2,T
+        weight = torch.mean(weight, dim=0) # L/2,T -> T
         res = self.softmax(weight).squeeze()
         return res
 
@@ -164,6 +171,7 @@ class AdaRNN(nn.Module):
         epsilon = 1e-12
         dist_old = dist_old.detach()
         dist_new = dist_new.detach()
+        # bool matrix
         ind = dist_new > dist_old + epsilon
         weight_mat[ind] = weight_mat[ind] * \
             (1 + torch.sigmoid(dist_new[ind] - dist_old[ind]))
